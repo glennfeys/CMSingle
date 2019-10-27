@@ -97,8 +97,17 @@ foreach ($webpages as $page) {
 $additionalContent = '
     <body>
         <div style="position:fixed; bottom:0; right:0; z-index: 999;">
-            <input type="button" id="saveBtn" value="Save" onclick="saveFile()"/>
+            <h3>Editor</h3>
+            <button  onclick="document.execCommand(\'bold\',false,null);">Bold</button>
+            <button  onclick="document.execCommand(\'italic\',false,null);">Italic</button>
+            <button  onclick="document.execCommand(\'underline\',false,null);">underline</button>
+            <br>
+            <button  onclick="document.execCommand(\'decreaseFontSize\',false,null);">smaller</button>
+            <button  onclick="document.execCommand(\'increaseFontSize\',false,null);">bigger</button>
+            <br>
             '.$links.'
+            <br>
+            <input style="width:100%;" type="button" id="saveBtn" value="Save" onclick="saveFile()"/>
         </div>
 
         <script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.3.2/jquery.min.js"></script>
