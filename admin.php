@@ -72,9 +72,10 @@ if ($currentFile === '') {
 }
 
 //get content of current file
-$index = fopen($currentFile, "r") or die("Unable to open file!");
-$content = fread($index,filesize($currentFile));
-fclose($index);
+$content = file_get_contents($currentFile);
+if($content === false) {
+    die("Unable to open file!");
+}
 
 //add contenteditable property
 $content = str_replace('<p', '<p contenteditable="true"', $content);
