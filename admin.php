@@ -7,59 +7,50 @@ $currentFile = '';
 $content = '';
 $webpages = [];
 
-//if file is uploaded
+//if there is no password given yet, ask the user for the password
+if (!isset($_POST["password"]) || (isset($_POST["password"]) && $_POST["password"] !== $password)) { // TODO: should change to hash + session/token auth
+    $error = '';
+    if (isset($_POST["password"]) && $_POST["password"] !== $password) {
+        $error = 'Wrong password !<br>';
+    }
+    die($error.'
+    <form method="post" action="admin.php">
+    password: <input type="password" name="password"> <br>
+    <input type="submit" value="log in">
+    ');
+}
+
+// If file is uploaded
 if (isset($_FILES["fileToUpload"])) {
     $target_dir = "CMSimpleImages/";
     if (!file_exists($target_dir)) {
         mkdir($target_dir);
     }
-    $target_file = $target_dir . basename($_FILES["fileToUpload"]["name"]);
-    $uploadOk = 1;
-    $imageFileType = strtolower(pathinfo($target_file,PATHINFO_EXTENSION));
-    // Check if image file is a actual image or fake image
-    $check = getimagesize($_FILES["fileToUpload"]["tmp_name"]);
-    if($check !== false) {
-        $uploadOk = 1;
+
+    if($_FILES["fileToUpload"]["error"] !== UPLOAD_ERR_OK) {
+        echo "Invalid upload";
     } else {
-        echo "File is not an image.";
-        $uploadOk = 0;
-    }
-    // Check if file already exists
-    if (file_exists($target_file)) {
-        echo "Sorry, file already exists.";
-        $uploadOk = 0;
-    }
-    // Check file size
-    if ($_FILES["fileToUpload"]["size"] > 500000) {
-        echo "Sorry, your file is too large.";
-        $uploadOk = 0;
-    }
-    // Check if $uploadOk is set to 0 by an error
-    if ($uploadOk == 0) {
-        echo "Sorry, your file was not uploaded.";
-    // if everything is ok, try to upload file
-    } else {
-        if (move_uploaded_file($_FILES["fileToUpload"]["tmp_name"], $target_file)) {
-            echo "Your file was succesfully uploaded";
+        $target_file = $target_dir . basename($_FILES["fileToUpload"]["name"]);
+        $imageFileType = pathinfo($target_file, PATHINFO_EXTENSION);
+
+        // Check if image file is a actual image or fake image
+        if(getimagesize($_FILES["fileToUpload"]["tmp_name"]) === false) {
+            echo "File is not an image.";
         } else {
-            echo " Sorry, there was an error uploading your file.";
+            // Check if file already exists
+            if (file_exists($target_file)) {
+                echo "Sorry, file already exists.";
+            // if everything is ok, try to upload file
+            } else {
+                if (move_uploaded_file($_FILES["fileToUpload"]["tmp_name"], $target_file)) {
+                    echo "Your file was succesfully uploaded";
+                } else {
+                    echo "Sorry, there was an error uploading your file.";
+                }
+            }
         }
     }
-    die();
-}
 
-
-//if there is no password given yet, ask the user for the password
-if (!isset($_POST["password"]) || (isset($_POST["password"]) && $_POST["password"] !== $password)) {
-    $error = '';
-    if (isset($_POST["password"]) && $_POST["password"] !== $password) {
-        $error = 'Wrong password !<br>';
-    }
-    echo $error.'
-    <form method="post" action="admin.php">
-    password: <input type="password" name="password"> <br>
-    <input type="submit" value="log in">
-    ';
     die();
 }
 
@@ -113,9 +104,10 @@ if ($currentFile === '') {
 }
 
 //get content of current file
-$index = fopen($currentFile, "r") or die("Unable to open file!");
-$content = fread($index,filesize($currentFile));
-fclose($index);
+$content = file_get_contents($currentFile);
+if($content === false) {
+    die("Unable to open file!");
+}
 
 //add contenteditable property
 $content = str_replace('<p', '<p contenteditable="true"', $content);
@@ -149,6 +141,7 @@ $additionalContent = '
             <form id="uploadForm" action="admin.php" method="post" enctype="multipart/form-data">
                 <input type="file" name="fileToUpload" id="fileToUpload" onchange="submitUpload()">
             </form>
+            <input style="width:100%;" type="button" id="saveBtn" value="Save" onclick="saveFile()"/>
             <br>
             '.$links.'
             <br>
@@ -162,14 +155,14 @@ $additionalContent = '
                 $.ajax({
                     type: "POST",
                     url: "admin.php",
-                    data: { file: curPage, content: document.documentElement.innerHTML, password: "'.$password.'" }
+                    data: { file: curPage, content: document.documentElement.innerHTML, password: "'.$password.'" } // TODO: insecure
                 }).done(alert("succesfully saved"));
             }
             function goTo(file) {
                 $.ajax({
                     type: "POST",
                     url: "admin.php",
-                    data: { goto: file, password: "'.$password.'" },
+                    data: { goto: file, password: "'.$password.'" }, // TODO: insecure
                     success: function(response){
                         document.body.parentElement.innerHTML = response;
                         curPage = file
@@ -183,6 +176,7 @@ $additionalContent = '
                 const formData = new FormData()
                 let image = document.getElementById("fileToUpload").files[0];
                 formData.append("fileToUpload", image)
+                formData.append("password", "' . $password . '") // TODO: insecure
 
                 fetch(url, {
                     method: "POST",
