@@ -194,7 +194,7 @@ $additionalContent = '
             <span class="close">&times;</span>
             <h2>change image to...</h2>
             <select id="imgselect" onchange="setPreview()">'.$options.'</select>
-            <img id="previewImg" style="width: auto" src=""/>
+            <img id="previewImg" style="width: inherit;" src=""/>
             <input type="submit" value="change" onclick="setImg()"></input>
 
             </div>
