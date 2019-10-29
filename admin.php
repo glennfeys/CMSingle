@@ -239,6 +239,7 @@ $additionalContent = '
                     success: function(response){
                         document.body.parentElement.innerHTML = response;
                         curPage = file
+                        addListeners()
                     }
                 });
             }
@@ -278,6 +279,18 @@ $additionalContent = '
                     modal.style.display = "block";
                  });
             });
+
+            function addListeners() {
+                $("img").click(function(){
+                    imgEditting = this;
+                    modal.style.display = "block";
+                });
+                modal = document.getElementById("myModal");
+                span = document.getElementsByClassName("close")[0];
+                span.onclick = function() {
+                    modal.style.display = "none";
+                }
+            }
             
             function setImg() {
                 let e = document.getElementById("imgselect");
