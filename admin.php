@@ -194,13 +194,15 @@ $additionalContent = '
             <span class="close">&times;</span>
             <h2>change image to...</h2>
             <select id="imgselect" onchange="setPreview()">'.$options.'</select>
-            <img id="previewImg" style="width: inherit;" src=""/>
-            <input type="submit" value="change" onclick="setImg()"></input>
+            <br>
+            <img id="previewImg" style="width: inherit; margin: 20px auto;" src=""/>
+            <input type="submit" value="change" onclick="setImg()">
 
             </div>
         
         </div>
-        <div style="position:fixed; bottom:0; right:0; z-index: 9; padding: 10px; border: 1px solid #000000;">
+        <div id="editBar" style="position:fixed; bottom:0; right:0; z-index: 9; padding: 10px;background-color: #f7faff; box-shadow: inset -4px -5px 34px -6px rgba(0,0,0,0.67);">
+            <div id="toggle" style="width:100%; height:25px; background-color: #c4c7cc;text-align: center;" onclick="toggleV()">Toggle visibility</div>
             <h3>Editor</h3>
             <button  onclick="document.execCommand(\'bold\',false,null);">Bold</button>
             <button  onclick="document.execCommand(\'italic\',false,null);">Italic</button>
@@ -239,6 +241,17 @@ $additionalContent = '
                         curPage = file
                     }
                 });
+            }
+
+            var toggled = false;
+
+            function toggleV() {
+                if (toggled) {
+                    document.getElementById("editBar").style.height = "40px";
+                } else {
+                    document.getElementById("editBar").style.height = "auto";
+                }
+                toggled = !toggled;
             }
             
             function submitUpload() {
