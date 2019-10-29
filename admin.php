@@ -127,9 +127,80 @@ foreach ($webpages as $page) {
     $links .= '<br><a href="#" onclick="goTo(\''.$page.'\')">'.$page.'</a>';
 }
 
+function getDirContents($path) {
+    $rii = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($path));
+
+    $files = array(); 
+    foreach ($rii as $file)
+        if (!$file->isDir())
+            $files[] = $file->getPathname();
+
+    return $files;
+}
+
+$images = getDirContents('.');
+
+$options = '';
+foreach ($images as $image) {
+    if (@getimagesize($image)) {
+        $options .= '<option value="'.$image.'">'.$image.'</option>';
+    }
+}
+
 $additionalContent = '
     <body>
-        <div style="position:fixed; bottom:0; right:0; z-index: 999;">
+    <style type="text/css" scoped>
+    .modal {
+        display: none; /* Hidden by default */
+        position: fixed; /* Stay in place */
+        z-index: 99; /* Sit on top */
+        left: 0;
+        top: 0;
+        width: 100%; /* Full width */
+        height: 100%; /* Full height */
+        overflow: auto; /* Enable scroll if needed */
+        background-color: rgb(0,0,0); /* Fallback color */
+        background-color: rgba(0,0,0,0.4); /* Black w/ opacity */
+      }
+      
+      /* Modal Content/Box */
+      .modal-content {
+        background-color: #fefefe;
+        margin: 15% auto; /* 15% from the top and centered */
+        padding: 20px;
+        border: 1px solid #888;
+        width: 80%; /* Could be more or less, depending on screen size */
+      }
+      
+      /* The Close Button */
+      .close {
+        color: #aaa;
+        float: right;
+        font-size: 28px;
+        font-weight: bold;
+      }
+      
+      .close:hover,
+      .close:focus {
+        color: black;
+        text-decoration: none;
+        cursor: pointer;
+      }
+    </style>
+        <div id="myModal" class="modal">
+
+            <!-- Modal content -->
+            <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2>change image to...</h2>
+            <select id="imgselect" onchange="setPreview()">'.$options.'</select>
+            <img id="previewImg" style="width: auto" src=""/>
+            <input type="submit" value="change" onclick="setImg()"></input>
+
+            </div>
+        
+        </div>
+        <div style="position:fixed; bottom:0; right:0; z-index: 9; padding: 10px; border: 1px solid #000000;">
             <h3>Editor</h3>
             <button  onclick="document.execCommand(\'bold\',false,null);">Bold</button>
             <button  onclick="document.execCommand(\'italic\',false,null);">Italic</button>
@@ -185,6 +256,44 @@ $additionalContent = '
                 .then(response => response.text())
                 .then(response => alert(response))
             }
+
+            var imgEditting;
+
+            $(window).load(function() {
+                $("img").click(function(){
+                    imgEditting = this;
+                    modal.style.display = "block";
+                 });
+            });
+            
+            function setImg() {
+                let e = document.getElementById("imgselect");
+                let value = e.options[e.selectedIndex].value;
+
+                imgEditting.src = value;
+                modal.style.display = "none";
+            }
+
+            function setPreview() {
+                let e = document.getElementById("imgselect");
+                let value = e.options[e.selectedIndex].value;
+                let img = document.getElementById("previewImg");
+                img.src = value;
+            }
+
+            var modal = document.getElementById("myModal");
+
+            var span = document.getElementsByClassName("close")[0];
+
+            span.onclick = function() {
+            modal.style.display = "none";
+            }
+
+            window.onclick = function(event) {
+                if (event.target == modal) {
+                    modal.style.display = "none";
+                }
+            }
             
         //END_CMS</script>
 ';
@@ -193,6 +302,7 @@ $additionalContent = '
 if(!strpos($content, '<body>')) {
     $content = $additionalContent.$content;
 } else {
+    //TODO do this with regex to find body
     $content = str_replace('<body>', $additionalContent, $content);
 }
 
