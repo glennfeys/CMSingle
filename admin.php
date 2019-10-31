@@ -1,23 +1,43 @@
 <?php
+// Configuration section, you can make changes here.
+define("PASSWORD", '$2y$10$NlQgA/AZ4NzL0.nYQVjT.eKQTMRXpihnao/c/V1Frd4fm4w8t36zG');
+// End of configuration section, don't make changes below.
 
-//edit password to the one you want
-$password = "admin";
+// TODO: CORS headers for CSRF
 
-$currentFile = '';
-$content = '';
-$webpages = [];
+session_start();
 
-//if there is no password given yet, ask the user for the password
-if (!isset($_POST["password"]) || (isset($_POST["password"]) && $_POST["password"] !== $password)) { // TODO: should change to hash + session/token auth
-    $error = '';
-    if (isset($_POST["password"]) && $_POST["password"] !== $password) {
-        $error = 'Wrong password !<br>';
-    }
-    die($error.'
-    <form method="post" action="admin.php">
-    password: <input type="password" name="password"> <br>
-    <input type="submit" value="log in">
-    ');
+$password = "";
+if(isset($_SESSION["password"])) {
+    $password = $_SESSION["password"];
+} elseif(isset($_POST["password"]) && is_string($_POST["password"])) {
+    $password = $_POST["password"];
+}
+
+if(password_verify($password, PASSWORD)) {
+    $_SESSION["password"] = $password;
+} else {
+    session_destroy();
+?>
+<!doctype html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <title>CMSingle</title>
+    </head>
+    <body>
+        <?php
+        if(isset($_POST["password"]) || isset($_SESSION["password"])) {
+            echo "Invalid credentials<br>";
+        }
+        ?>
+        <form method="post" action="admin.php">
+        password: <input type="password" name="password"> <br>
+        <input type="submit" value="log in">
+    </body>
+</html>
+<?php
+    die();
 }
 
 // If file is uploaded
@@ -53,6 +73,10 @@ if (isset($_FILES["fileToUpload"])) {
 
     die();
 }
+
+$currentFile = '';
+$content = '';
+$webpages = [];
 
 //this is executed when 'Save' is pressed and will set the value to the editted value
 if (isset($_POST["file"]) && isset($_POST["content"])) {
