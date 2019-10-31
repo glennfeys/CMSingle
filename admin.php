@@ -3,9 +3,34 @@
 define("PASSWORD", '$2y$10$NlQgA/AZ4NzL0.nYQVjT.eKQTMRXpihnao/c/V1Frd4fm4w8t36zG');
 // End of configuration section, don't make changes below.
 
-// TODO: CORS headers for CSRF
+/**
+ * Returns the CSRF token.
+ *
+ * @return string
+ */
+function csrf_token() {
+    return isset($_SESSION["csrf"]) ? $_SESSION["csrf"] : "";
+}
+
+/**
+ * Output CSRF field.
+ *
+ * @return void
+ */
+function csrf_field() {
+    echo '<input type="hidden" name="_token" value="' . csrf_token() . '">';
+}
+
+// =====
 
 session_start();
+
+// Check for CSRF
+if(!in_array($_SERVER['REQUEST_METHOD'], ["GET", "HEAD"])) {
+    if(!isset($_POST["_token"]) || !is_string($_POST["_token"]) || !hash_equals(csrf_token(), $_POST["_token"])) {
+        die();
+    }
+}
 
 $password = "";
 if(isset($_SESSION["password"])) {
@@ -17,7 +42,8 @@ if(isset($_SESSION["password"])) {
 if(password_verify($password, PASSWORD)) {
     $_SESSION["password"] = $password;
 } else {
-    session_destroy();
+    unset($_SESSION["password"]);
+    $_SESSION["csrf"] = base64_encode(random_bytes(50));
 ?>
 <!doctype html>
 <html>
@@ -32,7 +58,8 @@ if(password_verify($password, PASSWORD)) {
         }
         ?>
         <form method="post" action="admin.php">
-            Password: <input type="password" name="password"> <br>
+            <?= csrf_field() ?>
+            Password: <input type="password" name="password"><br>
             <input type="submit" value="log in">
         </form>
     </body>
@@ -180,14 +207,14 @@ $additionalContent = '
                 $.ajax({
                     type: "POST",
                     url: "admin.php",
-                    data: { file: curPage, content: document.documentElement.innerHTML, password: "'.$password.'" } // TODO: insecure
+                    data: { file: curPage, content: document.documentElement.innerHTML, _token: "'.csrf_token().'" }
                 }).done(alert("succesfully saved"));
             }
             function goTo(file) {
                 $.ajax({
                     type: "POST",
                     url: "admin.php",
-                    data: { goto: file, password: "'.$password.'" }, // TODO: insecure
+                    data: { goto: file, _token: "'.csrf_token().'" },
                     success: function(response){
                         document.body.parentElement.innerHTML = response;
                         curPage = file
@@ -201,7 +228,7 @@ $additionalContent = '
                 const formData = new FormData()
                 let image = document.getElementById("fileToUpload").files[0];
                 formData.append("fileToUpload", image)
-                formData.append("password", "' . $password . '") // TODO: insecure
+                formData.append("_token", "' . csrf_token() . '")
 
                 fetch(url, {
                     method: "POST",
