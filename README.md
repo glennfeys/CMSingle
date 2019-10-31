@@ -12,6 +12,8 @@ CMSingle is an open source CMS that uses only a single php file. No database is 
    `php -r 'echo password_hash("YOUR PASSWORD HERE", PASSWORD_DEFAULT);'`
 3. Profit
 
+This program requires PHP 7 or higher.
+
 ## Usage
 
 Go to {your website here}/admin.php
