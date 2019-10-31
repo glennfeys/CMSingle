@@ -26,7 +26,7 @@ function csrf_field() {
 session_start();
 
 // Check for CSRF
-if(!in_array($_SERVER['REQUEST_METHOD'], ["GET", "HEAD"])) {
+if(!in_array($_SERVER["REQUEST_METHOD"], ["GET", "HEAD"])) {
     if(!isset($_POST["_token"]) || !is_string($_POST["_token"]) || !hash_equals(csrf_token(), $_POST["_token"])) {
         die();
     }
