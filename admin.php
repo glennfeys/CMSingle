@@ -108,7 +108,7 @@ $webpages = [];
 
 //this is executed when 'Save' is pressed and will set the value to the editted value
 if (isset($_POST["file"]) && isset($_POST["content"])) {
-    $file = $_POST["file"];
+    $file = $_POST["file"]; // TODO: insecure, allows dir traversal
     $content = '<html>'.$_POST["content"].'</html>';
 
     //remove the editable content tags and restore the php tags
@@ -156,7 +156,7 @@ if ($currentFile === '') {
 }
 
 //get content of current file
-$content = file_get_contents($currentFile);
+$content = file_get_contents($currentFile); // TODO: insecure, allows dir traversal
 if($content === false) {
     die("Unable to open file!");
 }
