@@ -32,8 +32,9 @@ if(password_verify($password, PASSWORD)) {
         }
         ?>
         <form method="post" action="admin.php">
-        password: <input type="password" name="password"> <br>
-        <input type="submit" value="log in">
+            Password: <input type="password" name="password"> <br>
+            <input type="submit" value="log in">
+        </form>
     </body>
 </html>
 <?php
