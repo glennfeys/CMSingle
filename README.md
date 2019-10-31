@@ -5,7 +5,7 @@ CMSingle is an open source CMS that uses only a single php file. No database is 
 ## Installation
 
 1. Add admin.php to the project directory where you want to edit your HTML files.
-2. Configure a password by changing `define("PASSWORD", 'YOUR HASHED PASSWORD HERE');`.
+2. Configure a password by changing `define("PASSWORD", 'YOUR HASHED PASSWORD HERE');`. (Keep the single quotes.)
 
    To create a hashed password, execute this from the command line:
    
