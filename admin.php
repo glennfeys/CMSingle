@@ -1,6 +1,7 @@
 <?php
 // Configuration section, you can make changes here.
 define("PASSWORD", '$2y$10$NlQgA/AZ4NzL0.nYQVjT.eKQTMRXpihnao/c/V1Frd4fm4w8t36zG');
+define("UPLOAD_DIR", "img/");
 // End of configuration section, don't make changes below.
 
 /**
@@ -21,7 +22,7 @@ function csrf_field() {
     echo '<input type="hidden" name="_token" value="' . csrf_token() . '">';
 }
 
-// =====
+/******************************************************************************/
 
 session_start();
 
@@ -58,7 +59,7 @@ if(password_verify($password, PASSWORD)) {
         }
         ?>
         <form method="post" action="admin.php">
-            <?= csrf_field() ?>
+            <?php csrf_field(); ?>
             Password: <input type="password" name="password"><br>
             <input type="submit" value="log in">
         </form>
@@ -70,7 +71,7 @@ if(password_verify($password, PASSWORD)) {
 
 // If file is uploaded
 if (isset($_FILES["fileToUpload"])) {
-    $target_dir = "CMSimpleImages/";
+    $target_dir = UPLOAD_DIR;
     if (!file_exists($target_dir)) {
         mkdir($target_dir);
     }
