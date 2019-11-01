@@ -9,7 +9,7 @@ define("UPLOAD_DIR", "img/");
  *
  * @return string
  */
-function csrf_token() {
+function csrf_token(): string {
     return isset($_SESSION["csrf"]) ? $_SESSION["csrf"] : "";
 }
 
@@ -20,6 +20,30 @@ function csrf_token() {
  */
 function csrf_field() {
     echo '<input type="hidden" name="_token" value="' . csrf_token() . '">';
+}
+
+/**
+ * Gets safe path from user input
+ *
+ * @param string $path
+ * @return string
+ */
+function get_safe_path(string $path): string {
+    $path = str_replace(array('/', '\\'), DIRECTORY_SEPARATOR, $path);
+    $parts = explode(DIRECTORY_SEPARATOR, $path);
+
+    $newParts = [];
+    foreach($parts as $part) {
+        if($part === "" || $part === ".")
+            continue;
+
+        if($part === "..")
+            array_pop($newParts);
+        else
+            array_push($newParts, $part);
+    }
+
+    return "./" . implode(DIRECTORY_SEPARATOR, $newParts);
 }
 
 /******************************************************************************/
@@ -108,7 +132,7 @@ $webpages = [];
 
 //this is executed when 'Save' is pressed and will set the value to the editted value
 if (isset($_POST["file"]) && isset($_POST["content"])) {
-    $file = $_POST["file"]; // TODO: insecure, allows dir traversal
+    $file = get_safe_path($_POST["file"]);
     $content = '<html>'.$_POST["content"].'</html>';
 
     //remove the editable content tags and restore the php tags
@@ -130,9 +154,11 @@ if (isset($_POST["file"]) && isset($_POST["content"])) {
 }
 
 // if the user specified a page to go to set it here
-// this should strictly be a get request but because we also send the password as data we use post instead
 if (isset($_POST["goto"])) {
-    $currentFile = $_POST["goto"];
+    $currentFile = get_safe_path($_POST["goto"]);
+    if(!file_exists($currentFile)) { // TODO: notify user?
+        $currentFile = "";
+    }
 }
 
 // scan directory for html/php files and set current file if this hasnt happened already
@@ -156,7 +182,7 @@ if ($currentFile === '') {
 }
 
 //get content of current file
-$content = file_get_contents($currentFile); // TODO: insecure, allows dir traversal
+$content = file_get_contents($currentFile);
 if($content === false) {
     die("Unable to open file!");
 }
