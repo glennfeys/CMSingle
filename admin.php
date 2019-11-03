@@ -1,28 +1,101 @@
 <?php
+// Configuration section, you can make changes here.
+define("PASSWORD", '$2y$10$NlQgA/AZ4NzL0.nYQVjT.eKQTMRXpihnao/c/V1Frd4fm4w8t36zG');
+define("UPLOAD_DIR", "img/");
+// End of configuration section, don't make changes below.
 
-//edit password to the one you want
-$password = "admin";
+/**
+ * Returns the CSRF token.
+ *
+ * @return string
+ */
+function csrf_token(): string {
+    return isset($_SESSION["csrf"]) ? $_SESSION["csrf"] : "";
+}
 
-$currentFile = '';
-$content = '';
-$webpages = [];
+/**
+ * Output CSRF field.
+ *
+ * @return void
+ */
+function csrf_field() {
+    echo '<input type="hidden" name="_token" value="' . csrf_token() . '">';
+}
 
-//if there is no password given yet, ask the user for the password
-if (!isset($_POST["password"]) || (isset($_POST["password"]) && $_POST["password"] !== $password)) { // TODO: should change to hash + session/token auth
-    $error = '';
-    if (isset($_POST["password"]) && $_POST["password"] !== $password) {
-        $error = 'Wrong password !<br>';
+/**
+ * Gets safe path from user input
+ *
+ * @param string $path
+ * @return string
+ */
+function get_safe_path(string $path): string {
+    $path = str_replace(array('/', '\\'), DIRECTORY_SEPARATOR, $path);
+    $parts = explode(DIRECTORY_SEPARATOR, $path);
+
+    $newParts = [];
+    foreach($parts as $part) {
+        if($part === "" || $part === ".")
+            continue;
+
+        if($part === "..")
+            array_pop($newParts);
+        else
+            array_push($newParts, $part);
     }
-    die($error.'
-    <form method="post" action="admin.php">
-    password: <input type="password" name="password"> <br>
-    <input type="submit" value="log in">
-    ');
+
+    return "./" . implode(DIRECTORY_SEPARATOR, $newParts);
+}
+
+/******************************************************************************/
+
+session_start();
+
+// Check for CSRF
+if(!in_array($_SERVER["REQUEST_METHOD"], ["GET", "HEAD"])) {
+    if(!isset($_POST["_token"]) || !is_string($_POST["_token"]) || !hash_equals(csrf_token(), $_POST["_token"])) {
+        die();
+    }
+}
+
+$password = "";
+if(isset($_SESSION["password"])) {
+    $password = $_SESSION["password"];
+} elseif(isset($_POST["password"]) && is_string($_POST["password"])) {
+    $password = $_POST["password"];
+}
+
+if(password_verify($password, PASSWORD)) {
+    $_SESSION["password"] = $password;
+} else {
+    unset($_SESSION["password"]);
+    $_SESSION["csrf"] = base64_encode(random_bytes(50));
+?>
+<!doctype html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <title>CMSingle</title>
+    </head>
+    <body>
+        <?php
+        if(isset($_POST["password"]) || isset($_SESSION["password"])) {
+            echo "Invalid credentials<br>";
+        }
+        ?>
+        <form method="post" action="admin.php">
+            <?php csrf_field(); ?>
+            Password: <input type="password" name="password"><br>
+            <input type="submit" value="log in">
+        </form>
+    </body>
+</html>
+<?php
+    die();
 }
 
 // If file is uploaded
 if (isset($_FILES["fileToUpload"])) {
-    $target_dir = "CMSimpleImages/";
+    $target_dir = UPLOAD_DIR;
     if (!file_exists($target_dir)) {
         mkdir($target_dir);
     }
@@ -31,7 +104,6 @@ if (isset($_FILES["fileToUpload"])) {
         echo "Invalid upload";
     } else {
         $target_file = $target_dir . basename($_FILES["fileToUpload"]["name"]);
-        $imageFileType = pathinfo($target_file, PATHINFO_EXTENSION);
 
         // Check if image file is a actual image or fake image
         if(getimagesize($_FILES["fileToUpload"]["tmp_name"]) === false) {
@@ -54,9 +126,13 @@ if (isset($_FILES["fileToUpload"])) {
     die();
 }
 
+$currentFile = '';
+$content = '';
+$webpages = [];
+
 //this is executed when 'Save' is pressed and will set the value to the editted value
 if (isset($_POST["file"]) && isset($_POST["content"])) {
-    $file = $_POST["file"];
+    $file = get_safe_path($_POST["file"]);
     $content = '<html>'.$_POST["content"].'</html>';
 
     //remove the editable content tags and restore the php tags
@@ -78,9 +154,11 @@ if (isset($_POST["file"]) && isset($_POST["content"])) {
 }
 
 // if the user specified a page to go to set it here
-// this should strictly be a get request but because we also send the password as data we use post instead
 if (isset($_POST["goto"])) {
-    $currentFile = $_POST["goto"];
+    $currentFile = get_safe_path($_POST["goto"]);
+    if(!file_exists($currentFile)) { // TODO: notify user?
+        $currentFile = "";
+    }
 }
 
 // scan directory for html/php files and set current file if this hasnt happened already
@@ -155,14 +233,14 @@ $additionalContent = '
                 $.ajax({
                     type: "POST",
                     url: "admin.php",
-                    data: { file: curPage, content: document.documentElement.innerHTML, password: "'.$password.'" } // TODO: insecure
+                    data: { file: curPage, content: document.documentElement.innerHTML, _token: "'.csrf_token().'" }
                 }).done(alert("succesfully saved"));
             }
             function goTo(file) {
                 $.ajax({
                     type: "POST",
                     url: "admin.php",
-                    data: { goto: file, password: "'.$password.'" }, // TODO: insecure
+                    data: { goto: file, _token: "'.csrf_token().'" },
                     success: function(response){
                         document.body.parentElement.innerHTML = response;
                         curPage = file
@@ -176,7 +254,7 @@ $additionalContent = '
                 const formData = new FormData()
                 let image = document.getElementById("fileToUpload").files[0];
                 formData.append("fileToUpload", image)
-                formData.append("password", "' . $password . '") // TODO: insecure
+                formData.append("_token", "' . csrf_token() . '")
 
                 fetch(url, {
                     method: "POST",
