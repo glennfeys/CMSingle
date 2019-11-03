@@ -360,10 +360,10 @@ function fillContent($currentFile='', $password) {
     } else {
         $content = preg_replace('/(<body.*>)/Us', '$1'.$additionalContent, $content);
     }
-    $admCont = file_get_contents('admin.php');
-    $pos = preg_match('/(^.*)<!-- Content -->/s',$admCont, $matches);
-    file_put_contents('admin.php', $matches[0]);
-    file_put_contents('admin.php', $content, FILE_APPEND);
+    //$admCont = file_get_contents('admin.php');
+    //$pos = preg_match('/(^.*)<!-- Content -->/s',$admCont, $matches);
+    //file_put_contents('admin.php', $matches[0]);
+    file_put_contents('adminContent.php', $content);
 }
 
 
@@ -390,6 +390,10 @@ function fillPhp($file, $content) {
     return $content;
 }
 
-?>
-
-<!-- Content -->
+try {
+    include "adminContent.php";
+} 
+catch (\Throwable $th) {
+    fillContent('', $password);
+    die('There is conflicting php in the file <button onclick="location.reload(); ">reload</button>');
+}
