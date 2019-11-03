@@ -1,30 +1,103 @@
 <?php
+// Configuration section, you can make changes here.
+define("PASSWORD", '$2y$10$NlQgA/AZ4NzL0.nYQVjT.eKQTMRXpihnao/c/V1Frd4fm4w8t36zG');
+define("UPLOAD_DIR", "img/");
+define("ADMIN_CONTENT", "adminContent.php");
+// End of configuration section, don't make changes below.
 
-//edit password to the one you want
-$password = "admin";
-
-$currentFile = '';
-$content = '';
-$webpages = [];
-
-//if there is no password given yet, ask the user for the password
-if (!isset($_POST["password"]) || (isset($_POST["password"]) && $_POST["password"] !== $password)) { // TODO: should change to hash + session/token auth
-    $error = '';
-    if (isset($_POST["password"]) && $_POST["password"] !== $password) {
-        $error = 'Wrong password !<br>';
-    }
-    fillContent('', $password);
-    die($error.'
-    <form method="post" action="admin.php">
-    password: <input type="password" name="password"> <br>
-    <input type="submit" value="log in">
-    ');
+/**
+ * Returns the CSRF token.
+ *
+ * @return string
+ */
+function csrf_token(): string {
+    return isset($_SESSION["csrf"]) ? $_SESSION["csrf"] : "";
 }
 
+/**
+ * Output CSRF field.
+ *
+ * @return void
+ */
+function csrf_field() {
+    echo '<input type="hidden" name="_token" value="' . csrf_token() . '">';
+}
+
+/**
+ * Gets safe path from user input
+ *
+ * @param string $path
+ * @return string
+ */
+function get_safe_path(string $path): string {
+    $path = str_replace(array('/', '\\'), DIRECTORY_SEPARATOR, $path);
+    $parts = explode(DIRECTORY_SEPARATOR, $path);
+
+    $newParts = [];
+    foreach($parts as $part) {
+        if($part === "" || $part === ".")
+            continue;
+
+        if($part === "..")
+            array_pop($newParts);
+        else
+            array_push($newParts, $part);
+    }
+
+    return "./" . implode(DIRECTORY_SEPARATOR, $newParts);
+}
+
+/******************************************************************************/
+
+session_start();
+
+// Check for CSRF
+if(!in_array($_SERVER["REQUEST_METHOD"], ["GET", "HEAD"])) {
+    if(!isset($_POST["_token"]) || !is_string($_POST["_token"]) || !hash_equals(csrf_token(), $_POST["_token"])) {
+        die();
+    }
+}
+
+$password = "";
+if(isset($_SESSION["password"])) {
+    $password = $_SESSION["password"];
+} elseif(isset($_POST["password"]) && is_string($_POST["password"])) {
+    $password = $_POST["password"];
+}
+
+if(password_verify($password, PASSWORD)) {
+    $_SESSION["password"] = $password;
+} else {
+    unset($_SESSION["password"]);
+    $_SESSION["csrf"] = base64_encode(random_bytes(50));
+?>
+<!doctype html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <title>CMSingle</title>
+    </head>
+    <body>
+        <?php
+        if(isset($_POST["password"]) || isset($_SESSION["password"])) {
+            echo "Invalid credentials<br>";
+        }
+        ?>
+        <form method="post" action="admin.php">
+            <?php csrf_field(); ?>
+            Password: <input type="password" name="password"><br>
+            <input type="submit" value="log in">
+        </form>
+    </body>
+</html>
+<?php
+    fillContent('');
+    die();
+}
 
 // If file is uploaded
 if (isset($_FILES["fileToUpload"])) {
-    $target_dir = "CMSimpleImages/";
+    $target_dir = UPLOAD_DIR;
     if (!file_exists($target_dir)) {
         mkdir($target_dir);
     }
@@ -33,7 +106,6 @@ if (isset($_FILES["fileToUpload"])) {
         echo "Invalid upload";
     } else {
         $target_file = $target_dir . basename($_FILES["fileToUpload"]["name"]);
-        $imageFileType = pathinfo($target_file, PATHINFO_EXTENSION);
 
         // Check if image file is a actual image or fake image
         if(getimagesize($_FILES["fileToUpload"]["tmp_name"]) === false) {
@@ -56,9 +128,19 @@ if (isset($_FILES["fileToUpload"])) {
     die();
 }
 
+//remove image
+if (isset($_POST["fileDelete"]) && is_file($_POST["fileDelete"])) {
+    unlink($_POST["fileDelete"]);
+    die("succesfully deleted file");
+}
+
+$currentFile = '';
+$content = '';
+$webpages = [];
+
 //this is executed when 'Save' is pressed and will set the value to the editted value
 if (isset($_POST["file"]) && isset($_POST["content"])) {
-    $file = $_POST["file"];
+    $file = get_safe_path($_POST["file"]);
     $content = '<html>'.$_POST["content"].'</html>';
 
     $content = fillPhp($file, $content);
@@ -80,14 +162,24 @@ if (isset($_POST["file"]) && isset($_POST["content"])) {
 }
 
 // if the user specified a page to go to set it here
-// this should strictly be a get request but because we also send the password as data we use post instead
 if (isset($_POST["goto"])) {
-    $currentFile = $_POST["goto"];
-    fillContent($currentFile, $password);
-    die('reload');
+    $currentFile = get_safe_path($_POST["goto"]);
+    if(!file_exists($currentFile)) { // TODO: notify user?
+        $currentFile = "";
+    }
+    fillContent($currentFile);
+    //echo $currentFile;
+    die("reload");
 }
 
-function fillContent($currentFile='', $password) {
+/*
+if ($currentFile === '') {
+    fillContent($currentFile);
+}
+*/
+
+
+function fillContent($currentFile='') {
 
     // scan directory for html/php files and set current file if this hasnt happened already
     foreach (scandir('.') as $file) {
@@ -159,6 +251,7 @@ function fillContent($currentFile='', $password) {
 
     $additionalContent = '
         <!--CMSingleBegin-->
+        <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.1/css/all.css" integrity="sha384-fnmOCqbTlWIlj8LyTjo7mOUStjsKC4pOpQbqyi7RrhN7udi9RwhKkMHpvLbHG9Sr" crossorigin="anonymous">
         <style type="text/css" scoped>
         .modal {
             display: none; /* Hidden by default */
@@ -184,6 +277,7 @@ function fillContent($currentFile='', $password) {
         
         /* The Close Button */
         .close {
+            top: 10px;
             color: #aaa;
             float: right;
             font-size: 28px;
@@ -206,29 +300,31 @@ function fillContent($currentFile='', $password) {
                 <select id="imgselect" onchange="setPreview()">'.$options.'</select>
                 <br>
                 <img id="previewImg" style="width: inherit; margin: 20px auto;" src=""/>
-                <input type="submit" value="change" onclick="setImg()">
-
+                <input id="setI" type="submit" value="change" onclick="setImg()">
+                <input id="removeI" type="submit" value="remove" onclick="removeImg()">
                 </div>
             
             </div>
-            <div id="editBar" style="position:fixed; bottom:0; right:0; z-index: 9; padding: 10px;background-color: #f7faff; box-shadow: inset -4px -5px 34px -6px rgba(0,0,0,0.67);">
-                <div id="toggle" style="width:100%; height:25px; background-color: #c4c7cc;text-align: center;" onclick="toggleV()">Toggle visibility</div>
-                <h3>Editor</h3>
-                <button  onclick="document.execCommand(\'bold\',false,null);">Bold</button>
-                <button  onclick="document.execCommand(\'italic\',false,null);">Italic</button>
-                <button  onclick="document.execCommand(\'underline\',false,null);">underline</button>
-                <br>
-                <button  onclick="document.execCommand(\'decreaseFontSize\',false,null);">smaller</button>
-                <button  onclick="document.execCommand(\'increaseFontSize\',false,null);">bigger</button>
-                <br>
-                <form id="uploadForm" action="admin.php" method="post" enctype="multipart/form-data">
-                    <input type="file" name="fileToUpload" id="fileToUpload" onchange="submitUpload()">
-                </form>
-                <input style="width:100%;" type="button" id="saveBtn" value="Save" onclick="saveFile()"/>
-                <br>
-                '.$links.'
-                <br>
-                
+            <div id="editBar" style="position:fixed; bottom:0; right:0; z-index: 9; background-color: #f7faff; box-shadow: inset -4px -5px 34px -6px rgba(0,0,0,0.67); max-height: 1000px; transition: max-height 1s;">
+                <div id="toggle" style="width:100%; padding:10px; background-color: #c4c7cc;text-align: center;" onclick="toggleV()"><i id="toggleBtn" class="fas fa-chevron-down"></i></div>
+                <div style="margin:10px;">
+                    <h3>Editor</h3>
+                    <button  onclick="document.execCommand(\'bold\',false,null);"><i class="fas fa-bold"></i></button>
+                    <button  onclick="document.execCommand(\'italic\',false,null);"><i class="fas fa-italic"></i></button>
+                    <button  onclick="document.execCommand(\'underline\',false,null);"><i class="fas fa-underline"></i></button>
+                    <br>
+                    <button  onclick="document.execCommand(\'decreaseFontSize\',false,null);">smaller</button>
+                    <button  onclick="document.execCommand(\'increaseFontSize\',false,null);">bigger</button>
+                    <br>
+                    <form id="uploadForm" action="admin.php" method="post" enctype="multipart/form-data">
+                        <input type="file" name="fileToUpload" id="fileToUpload" onchange="submitUpload()">
+                    </form>
+                    <button  onclick="callRemove()">Remove Image</button>
+                    <input style="width:100%;" type="button" id="saveBtn" value="Save" onclick="saveFile()"/>
+                    <br>
+                    '.$links.'
+                    <br>
+                </div>
             </div>
 
             <script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.3.2/jquery.min.js"></script>
@@ -240,7 +336,7 @@ function fillContent($currentFile='', $password) {
                     const formData = new FormData()
                     formData.append("file", curPage)
                     formData.append("content", document.documentElement.innerHTML)
-                    formData.append("password", "' . $password . '") // TODO: insecure
+                    formData.append("_token", "'.csrf_token().'") // TODO: insecure
 
                     fetch(url, {
                         method: "POST",
@@ -255,7 +351,7 @@ function fillContent($currentFile='', $password) {
                     const url = "admin.php"
                     const formData = new FormData()
                     formData.append("goto", file)
-                    formData.append("password", "' . $password . '") // TODO: insecure
+                    formData.append("_token", "'.csrf_token().'") // TODO: insecure
 
                     fetch(url, {
                         method: "POST",
@@ -273,9 +369,13 @@ function fillContent($currentFile='', $password) {
 
                 function toggleV() {
                     if (toggled) {
-                        document.getElementById("editBar").style.height = "40px";
+                        document.getElementById("editBar").style.maxHeight = "35px";
+                        document.getElementById("toggleBtn").classList.add("fa-chevron-up");
+                        document.getElementById("toggleBtn").classList.remove("fa-chevron-down");
                     } else {
-                        document.getElementById("editBar").style.height = "auto";
+                        document.getElementById("editBar").style.maxHeight = "1000px";
+                        document.getElementById("toggleBtn").classList.add("fa-chevron-down");
+                        document.getElementById("toggleBtn").classList.remove("fa-chevron-up");
                     }
                     toggled = !toggled;
                 }
@@ -286,14 +386,41 @@ function fillContent($currentFile='', $password) {
                     const formData = new FormData()
                     let image = document.getElementById("fileToUpload").files[0];
                     formData.append("fileToUpload", image)
-                    formData.append("password", "' . $password . '") // TODO: insecure
+                    formData.append("_token", "'.csrf_token().'")
 
                     fetch(url, {
                         method: "POST",
                         body: formData,
                     })
                     .then(response => response.text())
-                    .then(response => alert(response))
+                    .then(response => {
+                        alert(response);
+                        if (response === "Your file was succesfully uploaded") {
+                            let x = document.getElementById("imgselect");
+                            let option = document.createElement("option");
+                            option.text = "'.UPLOAD_DIR.'"+image.name;
+                            option.value = "'.UPLOAD_DIR.'"+image.name;
+                            x.add(option);
+                        }
+                    });
+                }
+                function removeImg() {
+                    let e = document.getElementById("imgselect");
+                    let value = e.options[e.selectedIndex].value;
+                    const formData = new FormData();
+                    formData.append("_token", "'.csrf_token().'");
+                    formData.append("fileDelete", value);
+                    fetch("admin.php", {
+                        method: "POST",
+                        body: formData,
+                    })
+                    .then(response => response.text())
+                    .then(response => {
+                        if (response === "succesfully deleted file") {
+                            e.remove(e.selectedIndex);
+                        }
+                        alert(response);
+                    });
                 }
 
                 var imgEditting;
@@ -302,6 +429,8 @@ function fillContent($currentFile='', $password) {
                     $("img").click(function(){
                         imgEditting = this;
                         modal.style.display = "block";
+                        document.getElementById("setI").style.display = "block";
+                        document.getElementById("removeI").style.display = "none";
                     });
                 });
 
@@ -309,12 +438,20 @@ function fillContent($currentFile='', $password) {
                     $("img").click(function(){
                         imgEditting = this;
                         modal.style.display = "block";
+                        document.getElementById("setI").style.display = "block";
+                        document.getElementById("removeI").style.display = "none";
                     });
                     modal = document.getElementById("myModal");
                     span = document.getElementsByClassName("close")[0];
                     span.onclick = function() {
                         modal.style.display = "none";
                     }
+                }
+
+                function callRemove() {
+                    modal.style.display = "block";
+                    document.getElementById("setI").style.display = "none";
+                    document.getElementById("removeI").style.display = "block";
                 }
                 
                 function setImg() {
@@ -363,7 +500,7 @@ function fillContent($currentFile='', $password) {
     //$admCont = file_get_contents('admin.php');
     //$pos = preg_match('/(^.*)<!-- Content -->/s',$admCont, $matches);
     //file_put_contents('admin.php', $matches[0]);
-    file_put_contents('adminContent.php', $content);
+    file_put_contents(ADMIN_CONTENT, $content);
 }
 
 
@@ -391,9 +528,13 @@ function fillPhp($file, $content) {
 }
 
 try {
-    include "adminContent.php";
-} 
+    if (file_exists(ADMIN_CONTENT)) {
+        include ADMIN_CONTENT;
+    } else {
+        throw new Exception("No adminContent", 1);
+    }
+}
 catch (\Throwable $th) {
-    fillContent('', $password);
+    fillContent('');
     die('There is conflicting php in the file <button onclick="location.reload(); ">reload</button>');
 }
