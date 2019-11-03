@@ -91,7 +91,6 @@ if(password_verify($password, PASSWORD)) {
     </body>
 </html>
 <?php
-    fillContent('');
     die();
 }
 
@@ -129,9 +128,13 @@ if (isset($_FILES["fileToUpload"])) {
 }
 
 //remove image
-if (isset($_POST["fileDelete"]) && is_file($_POST["fileDelete"])) {
-    unlink($_POST["fileDelete"]);
-    die("succesfully deleted file");
+if (isset($_POST["fileDelete"])) {
+    $file = get_safe_path($_POST["fileDelete"]);
+    if(is_file($file)) {
+        unlink($file);
+        echo "succesfully deleted file";
+    }
+    die();
 }
 
 $currentFile = '';
@@ -172,7 +175,7 @@ if (isset($_POST["goto"])) {
 }
 
 /**
- * Fills admin content with the content of the givven page with the editor inserted into it
+ * Fills admin content with the content of the given page with the editor inserted into it
  *
  * @param string $currentFile
  */
@@ -333,7 +336,7 @@ function fillContent($currentFile='') {
                     const formData = new FormData()
                     formData.append("file", curPage)
                     formData.append("content", document.documentElement.innerHTML)
-                    formData.append("_token", "'.csrf_token().'") // TODO: insecure
+                    formData.append("_token", "'.csrf_token().'")
 
                     fetch(url, {
                         method: "POST",
@@ -348,7 +351,7 @@ function fillContent($currentFile='') {
                     const url = "admin.php"
                     const formData = new FormData()
                     formData.append("goto", file)
-                    formData.append("_token", "'.csrf_token().'") // TODO: insecure
+                    formData.append("_token", "'.csrf_token().'")
 
                     fetch(url, {
                         method: "POST",
@@ -522,14 +525,8 @@ function fillPhp($file, $content) {
     return $content;
 }
 
-try {
-    if (file_exists(ADMIN_CONTENT)) {
-        include ADMIN_CONTENT;
-    } else {
-        throw new Exception("No adminContent", 1);
-    }
-}
-catch (\Throwable $th) {
+if(!file_exists(ADMIN_CONTENT)) {
     fillContent('');
-    die('There is conflicting php in the file <button onclick="location.reload(); ">reload</button>');
 }
+
+include ADMIN_CONTENT;
