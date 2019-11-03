@@ -141,7 +141,7 @@ $webpages = [];
 //this is executed when 'Save' is pressed and will set the value to the editted value
 if (isset($_POST["file"]) && isset($_POST["content"])) {
     $file = get_safe_path($_POST["file"]);
-    $content = '<html>'.$_POST["content"].'</html>';
+    $content = '<!doctype html><html>'.$_POST["content"].'</html>';
 
     $content = fillPhp($file, $content);
 
@@ -214,7 +214,7 @@ function fillContent($currentFile='') {
     $content = str_replace('<h3', '<h3 contenteditable="true"', $content);
     $content = str_replace('<h4', '<h4 contenteditable="true"', $content);
     $content = str_replace('<h5', '<h5 contenteditable="true"', $content);
-    $content = str_replace('<h6', '<p6 contenteditable="true"', $content);
+    $content = str_replace('<h6', '<h6 contenteditable="true"', $content);
 
     $content = str_replace('<?', '<!--CMSinglePHP1--><?', $content);
     $content = str_replace('?>', '?><!--CMSinglePHP2-->', $content);
@@ -485,11 +485,13 @@ function fillContent($currentFile='') {
     ';
 
     // add save buton, links and scripts
-    if(!preg_match('/(<body.*>)/Us', $content)) {
-        
-        $content = preg_replace('/(^.*\/[^>]*>)/s', '$1 <!--BODYHERE-->', $content);
-        $content = str_replace('<!--BODYHERE-->', $additionalContent, $content);
-        
+    if (!preg_match('/(<body.*>)/Us', $content)) {
+        if (!preg_match('/(^.*\?>)/Us', $content)) {
+            $content = '<div></div>'.$additionalContent.$content;
+        } else {
+            $content = preg_replace('/(^.*\?>)/Us', '$1 <!--BODYHERE-->', $content);
+            $content = str_replace('<!--BODYHERE-->', $additionalContent, $content);
+        }
     } else {
         $content = preg_replace('/(<body.*>)/Us', '$1'.$additionalContent, $content);
     }
@@ -506,16 +508,13 @@ function fillPhp($file, $content) {
     preg_match_all('/<\?.*\?>/Us', $fileCont, $matches1);
 
     for ($i=0; $i<count($matches1[0]); $i++) {
-        echo 'i='.$i;
         if ($i === 0 && strpos($content, '<!--CMSinglePHP1-->') > strpos($content, '<!--CMSinglePHP2-->')) {
-            echo '1';
             $content = preg_replace('/^.*<!--CMSinglePHP2-->/Us', $matches1[0][$i], $content);
-        } else if ($i === count($matches1[0])-1 && !strpos($content, '<!--CMSinglePHP2-->')) {
-            echo '2';
+        } else if ($i === count($matches1[0])-1 && !strpos($content, '<!--CMSinglePHP2-->') && strpos($content, '<!--CMSinglePHP1-->')) {
             $content = preg_replace('/<!--CMSinglePHP1-->.*$/Us', $matches1[0][$i], $content);
         } else {
-            echo '3';
-            $content = preg_replace('/<!--CMSinglePHP1-->.*<!--CMSinglePHP2-->/Us', $matches1[0][$i], $content);
+            // TODO when there are slahes in matches1 or other special chars, things can brake
+            $content = preg_replace('/(^.*)<!--CMSinglePHP1-->.*<!--CMSinglePHP2-->/Us', '$1 '.$matches1[0][$i], $content);
         }
     }
 
