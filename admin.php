@@ -75,8 +75,7 @@ if(password_verify($password, PASSWORD)) {
 } else {
     unset($_SESSION["password"]);
     $_SESSION["csrf"] = base64_encode(random_bytes(50));
-    unlink(ADMIN_CONTENT);
-    
+    if(file_exists(ADMIN_CONTENT)) unlink(ADMIN_CONTENT);
 ?>
 <!doctype html>
 <html>
@@ -235,7 +234,7 @@ function fillContent($currentFile='') {
     $content = str_replace('<h5', '<h5 contenteditable="true"', $content);
     $content = str_replace('<h6', '<h6 contenteditable="true"', $content);
 
-    $content = str_replace('<?', '<!--CMSinglePHP1--><?', $content);
+    $content = str_replace('<?php', '<!--CMSinglePHP1--><?php', $content);
     $content = str_replace('?>', '?><!--CMSinglePHP2-->', $content);
 
 
@@ -297,7 +296,7 @@ function fillContent($currentFile='') {
                 </button>
               </div>
               <div class="modal-body">
-                <select id="imgselect2" onchange="setPreview()">'.$options.'</select>
+                <select id="imgselect" onchange="setPreview()">'.$options.'</select>
                 <br>
                 <img id="previewImg" style="width: 100%; margin: 20px auto;" src=""/>
               </div>
@@ -335,6 +334,7 @@ function fillContent($currentFile='') {
                     <br>
                 </div>
             </div>
+            <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/css/bootstrap.min.css" integrity="sha384-9aIt2nRpC12Uk9gS9baDl411NQApFmC26EwAOH8WgZl5MYYxFfc+NcPb1dKGj7Sk" crossorigin="anonymous">
 
             <script type="text/javascript" src="https://code.jquery.com/jquery-3.2.1.min.js"></script>
             <script>
@@ -415,8 +415,9 @@ function fillContent($currentFile='') {
                         }
                     });
                 }
+
                 function removeImg() {
-                    let e = document.getElementById("imgselect2");
+                    let e = document.getElementById("imgselect");
                     let value = e.options[e.selectedIndex].value;
                     const formData = new FormData();
                     formData.append("_token", "'.csrf_token().'");
@@ -460,7 +461,7 @@ function fillContent($currentFile='') {
                 }
                 
                 function setImg() {
-                    let e = document.getElementById("imgselect2");
+                    let e = document.getElementById("imgselect");
                     let value = e.options[e.selectedIndex].value;
 
                     imgEditting.src = value;
@@ -468,7 +469,7 @@ function fillContent($currentFile='') {
                 }
 
                 function setPreview() {
-                    let e = document.getElementById("imgselect2");
+                    let e = document.getElementById("imgselect");
                     let value = e.options[e.selectedIndex].value;
                     let img = document.getElementById("previewImg");
                     img.src = value;
@@ -495,7 +496,7 @@ function fillContent($currentFile='') {
     // add save buton, links and scripts
     if (!preg_match('/(<body.*>)/Us', $content)) {
         if (!preg_match('/(^.*\?>)/Us', $content)) {
-            $content = '<div></div>'.$additionalContent.$content;
+            $content = ''.$additionalContent.$content;
         } else {
             $content = preg_replace('/(^.*\?>)/Us', '$1 <!--BODYHERE-->', $content);
             $content = str_replace('<!--BODYHERE-->', $additionalContent, $content);
@@ -533,4 +534,21 @@ if(!file_exists(ADMIN_CONTENT)) {
     fillContent('');
 }
 
-include ADMIN_CONTENT;
+//include ADMIN_CONTENT;
+
+try {
+    if (!include ADMIN_CONTENT) {
+        unlink(ADMIN_CONTENT);
+        echo "Error file couldn't load lol";
+        
+    }
+} catch(ErrorException $ex) {
+    echo "Error file couldn't load lol";
+    unlink(ADMIN_CONTENT);
+}
+
+
+
+
+
+
