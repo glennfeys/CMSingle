@@ -1,9 +1,11 @@
 <?php
+/****************************************************************************** */
 // Configuration section, you can make changes here.
 define("PASSWORD", '$2y$10$NlQgA/AZ4NzL0.nYQVjT.eKQTMRXpihnao/c/V1Frd4fm4w8t36zG');
 define("UPLOAD_DIR", "img/");
 define("ADMIN_CONTENT", "adminContent.php");
 // End of configuration section, don't make changes below.
+/****************************************************************************** */
 
 /**
  * Returns the CSRF token.
@@ -51,25 +53,30 @@ function get_safe_path(string $path): string {
 
 session_start();
 
+
 // Check for CSRF
 if(!in_array($_SERVER["REQUEST_METHOD"], ["GET", "HEAD"])) {
     if(!isset($_POST["_token"]) || !is_string($_POST["_token"]) || !hash_equals(csrf_token(), $_POST["_token"])) {
-        die();
+        die("wrong csrf token");
     }
 }
 
 $password = "";
-if(isset($_SESSION["password"])) {
+if (isset($_SESSION["password"])) {
     $password = $_SESSION["password"];
-} elseif(isset($_POST["password"]) && is_string($_POST["password"])) {
+} elseif (isset($_POST["password"]) && is_string($_POST["password"])) {
     $password = $_POST["password"];
 }
 
+
+// check if there is a session/correct password
 if(password_verify($password, PASSWORD)) {
     $_SESSION["password"] = $password;
 } else {
     unset($_SESSION["password"]);
     $_SESSION["csrf"] = base64_encode(random_bytes(50));
+    unlink(ADMIN_CONTENT);
+    
 ?>
 <!doctype html>
 <html>
@@ -85,8 +92,15 @@ if(password_verify($password, PASSWORD)) {
         ?>
         <form method="post" action="admin.php">
             <?php csrf_field(); ?>
-            Password: <input type="password" name="password"><br>
-            <input type="submit" value="log in">
+            <div style="margin:auto; margin-top:100px; text-align:center; width:280px; padding:20px; border:1px solid black; border-radius: 15px">
+                <div style="margin:auto; text-align:center; width:250px;">
+                    <h2>CMSingle</h2>
+                    <hr>
+                    <b>Password: </b> &nbsp;&nbsp; <input style="width:155px" type="password" name="password"><br>
+                    <input style="width:100%; margin:5px 0;" type="submit" value="log in">
+                </div>
+            </div>
+            
         </form>
     </body>
 </html>
@@ -100,6 +114,7 @@ if (isset($_FILES["fileToUpload"])) {
     if (!file_exists($target_dir)) {
         mkdir($target_dir);
     }
+
 
     if($_FILES["fileToUpload"]["error"] !== UPLOAD_ERR_OK) {
         echo "Invalid upload";
@@ -123,7 +138,6 @@ if (isset($_FILES["fileToUpload"])) {
             }
         }
     }
-
     die();
 }
 
@@ -148,8 +162,10 @@ if (isset($_POST["file"]) && isset($_POST["content"])) {
 
     $content = fillPhp($file, $content);
 
-    //remove the editable content tags and restore the php tags
+    //remove the editable content tags
     $content = str_replace('contenteditable="true"', '', $content);
+    $content = str_replace('<!--?php', '<?php', $content);
+    $content = str_replace('?-->', '?>', $content);
 
     //remove the inserted js
     $pattern = '/<!--CMSingleBegin-->.*<!--CMSingleEnd-->/s';
@@ -164,7 +180,7 @@ if (isset($_POST["file"]) && isset($_POST["content"])) {
     die();
 }
 
-// if the user specified a page to go to set it here
+// if the user specified a page to go to, set it here
 if (isset($_POST["goto"])) {
     $currentFile = get_safe_path($_POST["goto"]);
     if(!file_exists($currentFile)) { // TODO: notify user?
@@ -184,7 +200,7 @@ function fillContent($currentFile='') {
     // scan directory for html/php files and set current file if this hasnt happened already
     foreach (scandir('.') as $file) {
         $len = strlen($file);
-        if ($file !== 'admin.php' && (($len > 5 && substr($file, $len-4,4) === ".php") || ($len > 6 && substr($file, $len-5,5) === ".html"))) {
+        if ($file !== 'admin.php' && $file !== ADMIN_CONTENT && (($len > 5 && substr($file, $len-4,4) === ".php") || ($len > 6 && substr($file, $len-5,5) === ".html"))) {
             $webpages[] = $file;
         }
         // set index file as current file
@@ -226,7 +242,7 @@ function fillContent($currentFile='') {
     //make links for all webpages
     $links = '';
     foreach ($webpages as $page) {
-        $links .= '<br><a href="#" onclick="goTo(\''.$page.'\')">'.$page.'</a>';
+        $links .= '<option onclick="goTo(\''.$page.'\')">'.$page.'</option>';
     }
 
     function getDirContents($path) {
@@ -245,6 +261,9 @@ function fillContent($currentFile='') {
     $options = '';
     foreach ($images as $image) {
         if (@getimagesize($image)) {
+            //echo $image;
+            $image = str_replace('\\', '/', $image);
+            //echo $image;
             $options .= '<option value="'.$image.'">'.$image.'</option>';
         }
     }
@@ -253,58 +272,44 @@ function fillContent($currentFile='') {
         <!--CMSingleBegin-->
         <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.1/css/all.css" integrity="sha384-fnmOCqbTlWIlj8LyTjo7mOUStjsKC4pOpQbqyi7RrhN7udi9RwhKkMHpvLbHG9Sr" crossorigin="anonymous">
         <style type="text/css" scoped>
-        .modal {
-            display: none; /* Hidden by default */
-            position: fixed; /* Stay in place */
-            z-index: 99; /* Sit on top */
-            left: 0;
-            top: 0;
-            width: 100%; /* Full width */
-            height: 100%; /* Full height */
-            overflow: auto; /* Enable scroll if needed */
-            background-color: rgb(0,0,0); /* Fallback color */
-            background-color: rgba(0,0,0,0.4); /* Black w/ opacity */
+        select {
+            width:100%; 
+            overflow:hidden; 
+            white-space:nowrap; 
+            text-overflow:ellipsis;
+        }
+        select option {
+            width:100px;
+            text-overflow:ellipsis;
+            overflow:hidden;
         }
         
-        /* Modal Content/Box */
-        .modal-content {
-            background-color: #fefefe;
-            margin: 15% auto; /* 15% from the top and centered */
-            padding: 20px;
-            border: 1px solid #888;
-            width: 80%; /* Could be more or less, depending on screen size */
-        }
-        
-        /* The Close Button */
-        .close {
-            top: 10px;
-            color: #aaa;
-            float: right;
-            font-size: 28px;
-            font-weight: bold;
-        }
-        
-        .close:hover,
-        .close:focus {
-            color: black;
-            text-decoration: none;
-            cursor: pointer;
-        }
         </style>
-            <div id="myModal" class="modal">
 
-                <!-- Modal content -->
-                <div class="modal-content">
-                <span class="close">&times;</span>
-                <h2>change image to...</h2>
-                <select id="imgselect" onchange="setPreview()">'.$options.'</select>
+        <!-- Modal -->
+        <div class="modal fade" id="exampleModal" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true">
+          <div class="modal-dialog" role="document">
+            <div class="modal-content">
+              <div class="modal-header">
+                <h5 class="modal-title" id="exampleModalLabel">Change image to ...</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                  <span aria-hidden="true">&times;</span>
+                </button>
+              </div>
+              <div class="modal-body">
+                <select id="imgselect2" onchange="setPreview()">'.$options.'</select>
                 <br>
-                <img id="previewImg" style="width: inherit; margin: 20px auto;" src=""/>
-                <input id="setI" type="submit" value="change" onclick="setImg()">
-                <input id="removeI" type="submit" value="remove" onclick="removeImg()">
-                </div>
-            
+                <img id="previewImg" style="width: 100%; margin: 20px auto;" src=""/>
+              </div>
+              <div class="modal-footer">
+                <button id="closeMyModal" type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                <button id="setI" type="button" class="btn btn-primary" onclick="setImg()">Change Image</button>
+                <button id="removeI" type="button" class="btn btn-primary" onclick="removeImg()">Remove Image</button>
+              </div>
             </div>
+          </div>
+        </div>
+
             <div id="editBar" style="position:fixed; bottom:0; right:0; z-index: 9; background-color: #f7faff; box-shadow: inset -4px -5px 34px -6px rgba(0,0,0,0.67); max-height: 1000px; transition: max-height 1s;">
                 <div id="toggle" style="width:100%; padding:10px; background-color: #c4c7cc;text-align: center;" onclick="toggleV()"><i id="toggleBtn" class="fas fa-chevron-down"></i></div>
                 <div style="margin:10px;">
@@ -319,17 +324,23 @@ function fillContent($currentFile='') {
                     <form id="uploadForm" action="admin.php" method="post" enctype="multipart/form-data">
                         <input type="file" name="fileToUpload" id="fileToUpload" onchange="submitUpload()">
                     </form>
-                    <button  onclick="callRemove()">Remove Image</button>
+                    <button data-toggle="modal" data-target="#exampleModal"  onclick="callRemove()">Remove Image</button>
+                    <button class="d-none" id="editImageBtn" data-toggle="modal" data-target="#exampleModal"></button>
                     <input style="width:100%;" type="button" id="saveBtn" value="Save" onclick="saveFile()"/>
                     <br>
-                    '.$links.'
+                    <h4 style="margin:5px 0">Webpages</h4>
+                    <select style="width:100%; margin:5px 0">
+                        '.$links.'
+                    </select>
                     <br>
                 </div>
             </div>
 
-            <script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.3.2/jquery.min.js"></script>
+            <script type="text/javascript" src="https://code.jquery.com/jquery-3.2.1.min.js"></script>
             <script>
                 var curPage = "'.$currentFile.'"
+
+
                 function saveFile() {
 
                     const url = "admin.php"
@@ -405,7 +416,7 @@ function fillContent($currentFile='') {
                     });
                 }
                 function removeImg() {
-                    let e = document.getElementById("imgselect");
+                    let e = document.getElementById("imgselect2");
                     let value = e.options[e.selectedIndex].value;
                     const formData = new FormData();
                     formData.append("_token", "'.csrf_token().'");
@@ -425,45 +436,39 @@ function fillContent($currentFile='') {
 
                 var imgEditting;
 
-                $(window).load(function() {
+                $(window).on("load", function() {
                     $("img").click(function(){
                         imgEditting = this;
-                        modal.style.display = "block";
                         document.getElementById("setI").style.display = "block";
                         document.getElementById("removeI").style.display = "none";
+                        $("#editImageBtn").click();
                     });
                 });
 
                 function addListeners() {
                     $("img").click(function(){
                         imgEditting = this;
-                        modal.style.display = "block";
+                        $("#exampleModal").modal("show");
                         document.getElementById("setI").style.display = "block";
                         document.getElementById("removeI").style.display = "none";
                     });
-                    modal = document.getElementById("myModal");
-                    span = document.getElementsByClassName("close")[0];
-                    span.onclick = function() {
-                        modal.style.display = "none";
-                    }
                 }
 
                 function callRemove() {
-                    modal.style.display = "block";
                     document.getElementById("setI").style.display = "none";
                     document.getElementById("removeI").style.display = "block";
                 }
                 
                 function setImg() {
-                    let e = document.getElementById("imgselect");
+                    let e = document.getElementById("imgselect2");
                     let value = e.options[e.selectedIndex].value;
 
                     imgEditting.src = value;
-                    modal.style.display = "none";
+                    $("#closeMyModal").click();
                 }
 
                 function setPreview() {
-                    let e = document.getElementById("imgselect");
+                    let e = document.getElementById("imgselect2");
                     let value = e.options[e.selectedIndex].value;
                     let img = document.getElementById("previewImg");
                     img.src = value;
