@@ -374,7 +374,6 @@ function fillContent($currentFile='') {
             
             function submitUpload() {
                 const url = "admin.php"
-                const form = document.querySelector("#uploadForm")
                 const formData = new FormData()
                 let image = document.getElementById("fileToUpload").files[0];
                 formData.append("task", "upload-file")
