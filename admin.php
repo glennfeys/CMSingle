@@ -3,7 +3,7 @@
 // Configuration section, you can make changes here.
 define("PASSWORD", 'ADD PASSWORD HERE');
 define("UPLOAD_DIR", "img/");
-define("SNIPPET_DIR", ".\cmsnippets");
+define("SNIPPET_DIR", "cmsnippets");
 define("ADMIN_CONTENT", "adminContent.php");
 
 $excludedFiles = [
@@ -205,12 +205,14 @@ function fillContent($currentFile='') {
     }
 
     function getDirContents($path) {
-        $rii = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($path));
+        $files = [];
 
-        $files = array(); 
-        foreach ($rii as $file)
-            if (!$file->isDir())
-                $files[] = $file->getPathname();
+        if (file_exists($path)) {
+            $rii = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($path));
+            foreach ($rii as $file)
+                if (!$file->isDir())
+                    $files[] = $file->getPathname();
+        }
 
         return $files;
     }
