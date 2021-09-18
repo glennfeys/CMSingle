@@ -672,8 +672,7 @@ function get_webpages(){
     global $excludedFiles, $currentFile;
     $webpages = [];
     foreach (scandir('.') as $file) {
-        $len = strlen($file);
-        if (!in_array($file, $excludedFiles) && (($len > 5 && substr($file, $len-4,4) === ".php") || ($len > 6 && substr($file, $len-5,5) === ".html"))) {
+        if (!in_array($file, $excludedFiles) && (substr($file, -4) === ".php" || substr($file, -5) === ".html")) {
             if ($currentFile === '' && ($file === "index.php" || $file === "index.html")) {
                 array_unshift($webpages, $file);
             } else {
