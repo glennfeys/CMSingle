@@ -1,0 +1,13 @@
+# Ignore everything
+*
+
+# ...even if they are in subdirectories
+!*/
+
+# But not these files...
+!.gitignore
+!admin.php
+!README.md
+!LICENSE
+# etc...
+
