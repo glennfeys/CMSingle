@@ -1,7 +1,7 @@
 <?php
 /****************************************************************************** */
 // Configuration section, you can make changes here.
-define("PASSWORD", 'ADD PASSWORD HERE');
+define("PASSWORD", '$2y$10$SS94kNzBzzFJxwNmzE4Z5uiXmHIqilQk0y3j0R3dBGib8gqvYC6mC');
 define("UPLOAD_DIR", "img/");
 define("SNIPPET_DIR", "cmsnippets");
 define("ADMIN_CONTENT", "adminContent.php");
@@ -252,6 +252,11 @@ function fillContent($currentFile='') {
             text-overflow:ellipsis;
             overflow:hidden;
         }
+
+        .cmsingle-resize {
+            resize: both; 
+            overflow: auto;
+        }
         
         </style>
 
@@ -286,10 +291,9 @@ function fillContent($currentFile='') {
                 <button  onclick="document.execCommand(\'bold\',false,null);"><i class="fas fa-bold"></i></button>
                 <button  onclick="document.execCommand(\'italic\',false,null);"><i class="fas fa-italic"></i></button>
                 <button  onclick="document.execCommand(\'underline\',false,null);"><i class="fas fa-underline"></i></button>
-                <button  onclick="insertImg()"><i class="fas fa-image"></i>+</button>
-                <br>
                 <button  onclick="document.execCommand(\'decreaseFontSize\',false,null);">A<i class="fas fa-long-arrow-alt-down"></i></button>
                 <button  onclick="document.execCommand(\'increaseFontSize\',false,null);">A<i class="fas fa-long-arrow-alt-up"></i></button>
+                <button  onclick="insertImg()"><i class="fas fa-image"></i>+</button>
                 <br>
                 <form id="uploadForm" action="admin.php" method="post" enctype="multipart/form-data">
                     <input type="file" name="fileToUpload" id="fileToUpload" onchange="submitUpload()">
@@ -308,7 +312,7 @@ function fillContent($currentFile='') {
                     <option disabled selected value> -- select a snippet -- </option>
                     '.$snippet_options.'
                 </select>
-                <button style="width:10%;"  onclick="insertSnippet()">+</button>
+                <button style="width:10%;"  onclick="insertSnippet()"><i class="fas fa-plus"></i></button>
                 <br>
             </div>
         </div>
@@ -464,12 +468,12 @@ function fillContent($currentFile='') {
                 .then(response => response.text())
                 .then(response => {
                     pasteHtmlAtCaret(response)
+                    addListeners()
                 });
-                addListeners()
             }
 
             function insertImg() {
-                pasteHtmlAtCaret("<img src=\'\' alt=\'click to select picture\'>")
+                pasteHtmlAtCaret("<div class=\'cmsingle-resize\'><img class=\'img-fluid\' src=\'\' alt=\'click to select picture\'></div>")
                 addListeners()
             }
 
